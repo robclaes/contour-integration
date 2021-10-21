@@ -35,8 +35,8 @@ function eigenpairsFromIntegrals(T::Function, tol::Real, Ai::Matrix{N} ...) wher
     V0 = V[:,1:k];
     S0 = Diagonal(S[1:k]);
     W0 = W[:,1:k];
-    L,X = eigen(V0'*H1*W0*inv(S0));
-    X = X[1:n,:];
+    L,Xs = eigen(V0'*H1*W0*inv(S0));
+    X = V0[1:n,:]*Xs;
     inds = [];
     for i = 1:k
         if norm(T(X[:,i],L[i])*X[:,i]) < tol
