@@ -112,6 +112,6 @@ function Tfunction(xx,zz)
     reshape(sysT([xx;zz]),size(T))
 end
 
-include("eigenpair-extraction.jl")
+include("CIFEN.jl")
 momentMatrices = getMomentMatrices(Ts, rs, ss, x, z, nodes, ϕ, ϕprime, V, highestMoment)
 λs,xs = CIFEN.eigenpairsFromIntegrals(Tfunction, 1e-10, momentMatrices...)
