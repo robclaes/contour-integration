@@ -61,12 +61,12 @@ function momentMatrix(traceMatrices,nodes,ϕ,ϕprime,i, trap=true)
         AiN = AiN/(im*N)
         return AiN
     else # Simpson's rule
-        AiN = (traceMatrices[1]*ϕprime(nodes[1])*ϕ(nodes[1])^i + traceMatrices[end]*ϕprime(nodes[end])*ϕ(nodes[end])^i)
+        AiN = 1/3*(traceMatrices[1]*ϕprime(nodes[1])*ϕ(nodes[1])^i + traceMatrices[end]*ϕprime(nodes[end])*ϕ(nodes[end])^i)
         coeff = [4,2]
         for j = 2:N
-            AiN += coeff[j%2+1]*traceMatrices[j]*ϕprime(nodes[j])*ϕ(nodes[j])^i
+            AiN += coeff[j%2+1]/3*traceMatrices[j]*ϕprime(nodes[j])*ϕ(nodes[j])^i
         end
-        AiN = AiN/(im*3*N)
+        AiN = AiN/(im*N)
         return AiN
     end
 end
@@ -100,7 +100,7 @@ end
 function eigenpairsFromIntegrals(T::Function, tol::Real, Ai::Matrix{N} ...) where {N<:Number}
     n = size(Ai[1],1);
     H0,H1 = blockHankel(Ai...);
-    K = size(H0,1);
+    K = size(H0,2);
     V,S,W = svd(H0);
     # TODO: more robust rank test
     firstind = findfirst(S.<S[1]*length(S)*eps())
