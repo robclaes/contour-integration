@@ -11,17 +11,19 @@ function getStartsols(Ts, rs, ss, x, z₀, v)
     m = size(rs,1)
     n = size(Ts[1,:,:],1)
     @var zz[1:m] TT0[1:n,1:n] TT[1:m,1:n,1:n] vv[1:n] rr[1:m,1:n] sss[1:m,1:n]
+    rrx = rr*x
+    sssx = sss*x
     parvec = [TT0[:];TT[:];vv[:];rr[:];sss[:]]
     Sys1 = (TT0 + sum([zz[i]*TT[i,:,:] for i = 1:m]))*x - vv
-    Sys2 = [dot(sss[i,:],x)*zz[i]-dot(rr[i,:],x) for i = 1:m]
-    Sys = System([Sys1;Sys2], parameters = parvec)
+    Sys2 = [sssx[i]*zz[i] - rrx[i] for i =1:m]
+    Syss = System([Sys1;Sys2], parameters = parvec)
     target_T0 = Ts[1,:,:]+z₀*Ts[2,:,:]
     target_T = Ts[3:end,:,:]
     target_v = v
     target_r = rs
     target_s = ss
     target_parvec = [target_T0[:];target_T[:];target_v[:];target_r[:];target_s[:]]
-    R3 = solve(Sys,target_parameters = target_parvec)
+    R3 = solve(Syss,target_parameters = target_parvec)
     return [sol[1:n] for sol ∈ solutions(R3)]
 end
 
@@ -35,7 +37,9 @@ end
 
 function getTraceMatrices(Ts, rs, ss, x, z, ϕ, nodes, V)
     m,n=size(rs)
-    T = Ts[1,:,:] + z*Ts[2,:,:] + sum([dot(rs[i,:],x)/dot(ss[i,:],x)*Ts[2+i,:,:] for i = 1:m])
+    rsx = rs*x
+    ssx = ss*x
+    T = Ts[1,:,:] + z*Ts[2,:,:] + sum( [rsx[i]/ssx[i]*Ts[2+i,:,:] for i = 1:m] )
     z₀ = ϕ(nodes[1])
     k = size(V,2)
     traceMatrices = zeros(ComplexF64,length(nodes),n,k)
@@ -80,14 +84,14 @@ function blockHankel(Ai::Matrix{N} ...) where {N<:Number}
     @assert length(Ai)%2 == 0;
     
     K::Int = length(Ai)/2;
-    n = size(Ai[1],1);
+    n,m = size(Ai[1]);
     
     if K == 1
         return Ai[1], Ai[2];
     end
 
-    H0 = BlockArray{N}(undef_blocks,n*ones(Int,K),n*ones(Int,K));
-    H1 = BlockArray{N}(undef_blocks,n*ones(Int,K),n*ones(Int,K));
+    H0 = BlockArray{N}(undef_blocks,n*ones(Int,K),m*ones(Int,K));
+    H1 = BlockArray{N}(undef_blocks,n*ones(Int,K),m*ones(Int,K));
     for i = 1:K
         for j = 1:K
             H0[Block(i,j)] = Ai[i+j-1];
