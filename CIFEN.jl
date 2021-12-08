@@ -35,6 +35,23 @@ function computeTrace(T,x,z,z₀,startsols,v,ϕ,nodes)
     return solution_sets, traces
 end
 
+function computeTrace_2(T,x,z,z₀,startsols,v,ϕ,nodes)
+    sys = System(T*x - v, parameters = [z])
+    tracker = Tracker(ParameterHomotopy(sys, [2.2], [2.2]))
+    solution_sets = []
+    for i = 1:length(nodes)
+        start_parameters!(tracker, [z₀])
+        target_parameters!(tracker, [ϕ(nodes[i])])
+        z₀ = ϕ(nodes[i])
+        res = track.(tracker, startsols, 1.0, 0.0)
+        startsols = [r.solution for r ∈ res]
+        solutions_sets = push!(solution_sets,startsols)
+        #println("iteration $i")
+    end
+    traces = [sum(solset) for solset ∈ solution_sets]
+    return solution_sets, traces
+end
+
 function getTraceMatrices(Ts, rs, ss, x, z, ϕ, nodes, V)
     m,n=size(rs)
     rsx = rs*x
@@ -46,7 +63,7 @@ function getTraceMatrices(Ts, rs, ss, x, z, ϕ, nodes, V)
     for i = 1:k
         v = V[:,i]
         startsols = getStartsols(Ts, rs, ss, x, z₀, v)
-        solution_sets, traces = computeTrace(T,x,z,z₀,startsols,v,ϕ,nodes)
+        solution_sets, traces = computeTrace_2(T,x,z,z₀,startsols,v,ϕ,nodes)
         for j = 1:length(nodes)
             traceMatrices[j,:,i] = traces[j]
         end
@@ -82,10 +99,10 @@ end
 
 function blockHankel(Ai::Matrix{N} ...) where {N<:Number}
     @assert length(Ai)%2 == 0;
-    
+
     K::Int = length(Ai)/2;
     n,m = size(Ai[1]);
-    
+
     if K == 1
         return Ai[1], Ai[2];
     end

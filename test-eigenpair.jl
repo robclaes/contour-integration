@@ -7,10 +7,10 @@ n = 5
 k = 5
 @var x[1:n] z
 
-Ts = randn(ComplexF64,m+2,n,n)
+Ts = randn(m+2,n,n)
 rs = randn(m,n)
 ss = randn(m,n)
-v = randn(ComplexF64,n)
+v = randn(n)
 z₀ = 1.0
 V = randn(n,k)
 function ϕ(t)
@@ -36,3 +36,7 @@ momentMatrices = CIFEN.getMomentMatrices(Ts, rs, ss, x, z, nodes, ϕ, ϕprime, V
 λs,xs = CIFEN.eigenpairsFromIntegrals(Tfunction, 1e-10, momentMatrices...)
 println(λs)
 println(xs)
+
+T
+xs[1]
+Tfunction(xs[:,2],λs[2])*xs[:,2]
