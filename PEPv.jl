@@ -19,23 +19,23 @@ function reduceSolset(solset::Vector{Vector{T}} where T)
     return sum(solset)
 end
 
-function computeTrace(T::Matrix, x::Vector, z::Variable, z₀::Number, v::Vector, ϕ::Function, nodes::NodeType)
+function computeTrace(T::Matrix, x::Vector, z::Variable, z₀::Number, v::Vector, ϕ::Function, nodes::NodeType, p::Function)
     S = System(T*x - v, parameters = [z])
     startsols = getStartsols(S, z₀)
     R = solve(S,startsols;start_parameters = [z₀], target_parameters = [[ϕ(nodes[i])] for i = 1:length(nodes)])
     solution_sets = [solutions(RR[1]) for RR ∈ R]
-    traces = [reduceSolset(solset, x->x.^2) for solset ∈ solution_sets]
-    return solution_sets, traces
+    traces = [reduceSolset(solset, p) for solset ∈ solution_sets]
+    return traces
 end
 
-function getTraceMatrices(T::Matrix, x::Vector, z::Variable, ϕ::Function, nodes::NodeType, V::Matrix)
+function getTraceMatrices(T::Matrix, x::Vector, z::Variable, ϕ::Function, nodes::NodeType, V::Matrix, p::Function)
     z₀ = ϕ(nodes[1])
     k = size(V,2)
     n = size(T,1)
     traceMatrices = zeros(ComplexF64,length(nodes),n,k)
     for i = 1:k
         v = V[:,i]
-        solution_sets, traces = computeTrace(T,x,z,z₀,v,ϕ,nodes)
+        traces = computeTrace(T,x,z,z₀,v,ϕ,nodes,p)
         for j = 1:length(nodes)
             traceMatrices[j,:,i] = traces[j]
         end
@@ -64,8 +64,8 @@ function momentMatrix(traceMatrices::Vector{Matrix{T}} where T,nodes::NodeType, 
     end
 end
 
-function getMomentMatrices(T::Matrix, x::Vector, z::Variable, nodes::NodeType, ϕ::Function, ϕprime::Function, V::Matrix, highestMoment::Integer, trap::Bool=true)
-    traceMatrices = getTraceMatrices(T, x, z, ϕ, nodes, V)
+function getMomentMatrices(T::Matrix, x::Vector, z::Variable, nodes::NodeType, ϕ::Function, ϕprime::Function, V::Matrix, highestMoment::Integer, p::Function, trap::Bool=true)
+    traceMatrices = getTraceMatrices(T, x, z, ϕ, nodes, V, p)
     momentMatrices = [momentMatrix(traceMatrices,nodes,ϕ,ϕprime,i,trap) for i = 0:highestMoment]
 end
 
@@ -89,7 +89,7 @@ function blockHankel(Ai::Matrix{N} ...) where {N<:Number}
     end
     return Array(H0), Array(H1);
 end
-
+using Plots
 function eigenpairsFromIntegrals(T::Function, tol::Real, Ai::Matrix{N} ...) where {N<:Number}
     n = size(Ai[1],1);
     H0,H1 = blockHankel(Ai...);

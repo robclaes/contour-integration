@@ -4,11 +4,11 @@ using Random
 include("PEPv.jl")
 
 function ϕ(t)
-    1+0.2*exp(2*pi*im*t)
+    2*exp(2*pi*im*t)
 end
 
 function ϕprime(t)
-    0.4*pi*im*ϕ(t)
+    4*pi*im*exp(2*pi*im*t)
 end
 
 
@@ -32,4 +32,31 @@ nodes = LinRange(0,1,100);
 highestMoment = 3;
 V = randn(3,2);
 momentMatrices = PEPv.getMomentMatrices(T, x, z, nodes, ϕ, ϕprime, V, highestMoment)
+λs,xs = PEPv.eigenpairsFromIntegrals(Tfunction, 1e-2, momentMatrices...)
+
+
+# Example X
+@var x[1:3] z
+
+T = [1 (z) 0;
+     (z) 1 0;
+     0 0 (z)^2+1]
+
+function Tfunction(xx,zz)
+    sysT = System(T[:])
+    reshape(sysT([zz]),size(T))
+end
+
+function ϕ(t)
+    1+0.1*exp(2*pi*im*t)
+end
+
+function ϕprime(t)
+    0.2*pi*im*exp(2*pi*im*t)
+end
+
+nodes = LinRange(0,1,1000);
+highestMoment = 1;
+V = randn(3,3);
+momentMatrices = PEPv.getMomentMatrices(T, x, z, nodes, ϕ, ϕprime, V, highestMoment,x->x);
 λs,xs = PEPv.eigenpairsFromIntegrals(Tfunction, 1e-2, momentMatrices...)
