@@ -60,3 +60,30 @@ highestMoment = 1;
 V = randn(3,3);
 momentMatrices = PEPv.getMomentMatrices(T, x, z, nodes, ϕ, ϕprime, V, highestMoment,x->x);
 λs,xs = PEPv.eigenpairsFromIntegrals(Tfunction, 1e-2, momentMatrices...)
+
+
+# Example 7
+
+T = [1 z 1;
+     2 1 z;
+    x[2] (z+1)*x[3]+x[2] 0];
+
+function Tfunction(xx,zz)
+    sysT = System(T[:])
+    reshape(sysT([xx[2:3];zz]),size(T))
+end
+
+function ϕ(t)
+    -1+sqrt(3) +0.1*exp(2*pi*im*t)
+end
+
+function ϕprime(t)
+    0.2*pi*im*exp(2*pi*im*t)
+end
+
+nodes = LinRange(0,1,1000);
+highestMoment = 3;
+V = randn(3,3);
+momentMatrices = PEPv.getMomentMatrices(T, x, z, nodes, ϕ, ϕprime, V, highestMoment,x->x);
+λs,xs = PEPv.eigenpairsFromIntegrals(Tfunction, 1e-2, momentMatrices...)
+    
