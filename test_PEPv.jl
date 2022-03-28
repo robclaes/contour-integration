@@ -28,11 +28,12 @@ end
 
 
 
-nodes = LinRange(0,1,100);
-highestMoment = 3;
-V = randn(3,2);
-momentMatrices = PEPv.getMomentMatrices(T, x, z, nodes, ϕ, ϕprime, V, highestMoment)
-λs,xs = PEPv.eigenpairsFromIntegrals(Tfunction, 1e-2, momentMatrices...)
+nodes = LinRange(0,1,50);
+highestMoment = 7;
+V = randn(3,3);
+momentMatrices = PEPv.getMomentMatrices(T, x, z, nodes, ϕ, ϕprime, V, highestMoment,x->[x[1]^2;x[1]*x[2];x[1]*x[3]])
+λs,xs = PEPv.eigenpairsFromIntegrals(Tfunction, 1e-10, momentMatrices...)
+λs
 
 
 # Example X
