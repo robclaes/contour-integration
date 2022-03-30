@@ -3,6 +3,7 @@ module PEPv #Contour Integration For Eigenvector Nonlinearities
 using LinearAlgebra
 using BlockArrays
 using HomotopyContinuation
+using SmithNormalForm
 
 NodeType = Union{AbstractRange,Vector}
 
@@ -18,6 +19,22 @@ end
 function reduceSolset(solset::Vector{Vector{T}} where T)
     return sum(solset)
 end
+
+function traceMonomials(T::Matrix,x::Vector,z::Variable)
+    n = length(x)
+    F = T*x
+    FF = subs(F,z=>randn())
+    allexp = fill(0,n,0)
+    for ff in FF
+        E, C = exponents_coefficients(ff,x)
+        allexp = hcat(allexp,E)
+    end
+    SNF = smith(allexp)
+    M = (SNF.S*diagm(SNF))[:,1:n]
+    p = y -> [prod(y.^M[:,i]) for i = 1:n] 
+    return p
+end
+
 
 function computeTrace(T::Matrix, x::Vector, z::Variable, z₀::Number, v::Vector, ϕ::Function, nodes::NodeType, p::Function)
     S = System(T*x - v, parameters = [z])
@@ -64,7 +81,8 @@ function momentMatrix(traceMatrices::Vector{Matrix{T}} where T,nodes::NodeType, 
     end
 end
 
-function getMomentMatrices(T::Matrix, x::Vector, z::Variable, nodes::NodeType, ϕ::Function, ϕprime::Function, V::Matrix, highestMoment::Integer, p::Function, trap::Bool=true)
+function getMomentMatrices(T::Matrix, x::Vector, z::Variable, nodes::NodeType, ϕ::Function, ϕprime::Function, V::Matrix, highestMoment::Integer, trap::Bool=true)
+    p = traceMonomials(T,x,z)
     traceMatrices = getTraceMatrices(T, x, z, ϕ, nodes, V, p)
     momentMatrices = [momentMatrix(traceMatrices,nodes,ϕ,ϕprime,i,trap) for i = 0:highestMoment]
 end
@@ -89,7 +107,8 @@ function blockHankel(Ai::Matrix{N} ...) where {N<:Number}
     end
     return Array(H0), Array(H1);
 end
-using Plots
+
+
 function eigenpairsFromIntegrals(T::Function, tol::Real, Ai::Matrix{N} ...) where {N<:Number}
     n = size(Ai[1],1);
     H0,H1 = blockHankel(Ai...);
