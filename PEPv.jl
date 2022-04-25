@@ -7,52 +7,75 @@ using SmithNormalForm
 
 NodeType = Union{AbstractRange,Vector}
 
+
+function getRandomPolynomial(x::Vector, d::Int)
+    E,_ = exponents_coefficients(sum(x)^d,x)
+    monomials = [prod(x.^E[:,i]) for i = 1:size(E,2)]
+    poly = dot(randn(length(monomials)), monomials)
+end
+
+function getRandomMonomial(x::Vector, d::Int)
+    E,_ = exponents_coefficients(sum(x)^d,x)
+    monomials = [prod(x.^E[:,i]) for i = 1:size(E,2)]
+    ind = round(Int,length(monomials)/2)
+    mono = randn()*monomials[ind]
+end
+
+
+function getRandomPolynomialsFor(T::Matrix, x::Vector, z::Variable, nbcols::Int)
+    n = size(T,1)
+    T1 = T*ones(n);
+    dT = [degree(T1[i],x) for i ∈ 1:n]
+    reshape( [ getRandomPolynomial(x,dT[i]) for j ∈ 1:nbcols for i ∈ 1:n], n, nbcols)
+end
+
+function getRandomMonomialsFor(T::Matrix,x::Vector, z::Variable, nbcols::Int)
+    n = size(T,1)
+    T1 = T*ones(n)
+    dT = [degree(T1[i],x) for i ∈ 1:n]
+    reshape( [ getRandomMonomial(x,dT[i]) for j ∈ 1:nbcols for i ∈ 1:n], n, nbcols)
+end
+
+
 function getStartsols(S::System, z₀::Number)
     R = solve(S,target_parameters = [z₀])
     return solutions(R)
 end
 
-function reduceSolset(solset::Vector{Vector{T}} where T, p::Function)
-    return sum([p(sol) for sol ∈ solset])
-end
-
-function reduceSolset(solset::Vector{Vector{T}} where T)
-    return sum(solset)
-end
-
-function traceMonomials(T::Matrix,x::Vector,z::Variable)
-    n = length(x)
-    F = T*x
-    FF = subs(F,z=>randn())
-    allexp = fill(0,n,0)
-    for ff in FF
-        E, C = exponents_coefficients(ff,x)
-        allexp = hcat(allexp,E)
+function computeTrace_2(T::Matrix,x::Vector,z::Variable,z₀::Number,v::Vector,ϕ::Function,nodes::NodeType)
+    S = System(T*x - v, parameters = [z])
+    startsols = getStartsols(S, z₀)
+    tracker = Tracker(ParameterHomotopy(S, [2.2], [2.2]))
+    solution_sets = []
+    for i = 1:length(nodes)
+        start_parameters!(tracker, [z₀])
+        target_parameters!(tracker, [ϕ(nodes[i])])
+        z₀ = ϕ(nodes[i])
+        res = track.(tracker, startsols, 1.0, 0.0)
+        startsols = [r.solution for r ∈ res]
+        push!(solution_sets,startsols)
     end
-    SNF = smith(allexp)
-    M = (SNF.S*diagm(SNF))[:,1:n]
-    p = y -> [prod(y.^M[:,i]) for i = 1:n] 
-    return p
+    traces = [sum(solset) for solset ∈ solution_sets]
+    return  traces
 end
 
-
-function computeTrace(T::Matrix, x::Vector, z::Variable, z₀::Number, v::Vector, ϕ::Function, nodes::NodeType, p::Function)
+function computeTrace(T::Matrix, x::Vector, z::Variable, z₀::Number, v::Vector, ϕ::Function, nodes::NodeType)
     S = System(T*x - v, parameters = [z])
     startsols = getStartsols(S, z₀)
     R = solve(S,startsols;start_parameters = [z₀], target_parameters = [[ϕ(nodes[i])] for i = 1:length(nodes)])
     solution_sets = [solutions(RR[1]) for RR ∈ R]
-    traces = [reduceSolset(solset, p) for solset ∈ solution_sets]
+    traces = [sum(solset) for solset ∈ solution_sets]
     return traces
 end
 
-function getTraceMatrices(T::Matrix, x::Vector, z::Variable, ϕ::Function, nodes::NodeType, V::Matrix, p::Function)
+function getTraceMatrices(T::Matrix, x::Vector, z::Variable, ϕ::Function, nodes::NodeType, V::Matrix)
     z₀ = ϕ(nodes[1])
     k = size(V,2)
     n = size(T,1)
     traceMatrices = zeros(ComplexF64,length(nodes),n,k)
     for i = 1:k
         v = V[:,i]
-        traces = computeTrace(T,x,z,z₀,v,ϕ,nodes,p)
+        traces = computeTrace_2(T,x,z,z₀,v,ϕ,nodes)
         for j = 1:length(nodes)
             traceMatrices[j,:,i] = traces[j]
         end
@@ -82,8 +105,7 @@ function momentMatrix(traceMatrices::Vector{Matrix{T}} where T,nodes::NodeType, 
 end
 
 function getMomentMatrices(T::Matrix, x::Vector, z::Variable, nodes::NodeType, ϕ::Function, ϕprime::Function, V::Matrix, highestMoment::Integer, trap::Bool=true)
-    p = traceMonomials(T,x,z)
-    traceMatrices = getTraceMatrices(T, x, z, ϕ, nodes, V, p)
+    traceMatrices = getTraceMatrices(T, x, z, ϕ, nodes, V)
     momentMatrices = [momentMatrix(traceMatrices,nodes,ϕ,ϕprime,i,trap) for i = 0:highestMoment]
 end
 
@@ -123,13 +145,15 @@ function eigenpairsFromIntegrals(T::Function, tol::Real, Ai::Matrix{N} ...) wher
     L,Xs = eigen(V0'*H1*W0*inv(S0));
     X = V0[1:n,:]*Xs;
     inds = [];
+    res = []
     for i = 1:k
         X[:,i] = X[:,i]/norm(X[:,i])
         if norm(T(X[:,i],L[i])*X[:,i]) < tol
             push!(inds,i);
+            push!(res,norm(T(X[:,i],L[i])*X[:,i]))
         end
     end
-    return L[inds],X[:,inds];
+    return L[inds],X[:,inds],res;
 end
 
 end
