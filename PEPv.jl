@@ -3,7 +3,7 @@ module PEPv #Contour Integration For Eigenvector Nonlinearities
 using LinearAlgebra
 using BlockArrays
 using HomotopyContinuation
-using SmithNormalForm
+
 
 NodeType = Union{AbstractRange,Vector}
 
@@ -38,25 +38,39 @@ end
 
 
 function getStartsols(S::System, z₀::Number)
-    R = solve(S,target_parameters = [z₀])
+    R = solve(S,target_parameters = [z₀],only_non_zero=true)
     return solutions(R)
+end
+
+function computeTrace_3(T::Matrix, x::Vector, z::Variable, z₀::Number, v::Vector, ϕ::Function, nodes::NodeType)
+    S = System(T*x-v, parameters=[z])
+    traces = zeros(ComplexF64, length(v),length(nodes) )
+    startsols = getStartsols(S,z₀)
+    traces[:,1] = sum(startsols)
+    for i = 1:length(nodes)-1
+        start_param = ϕ(nodes[i])
+        end_param = ϕ(nodes[i+1])
+        R = solve(S,startsols;start_parameters = [start_param], target_parameters = [end_param])
+        startsols = solutions(R)
+        traces[:,i+1] = sum(startsols)
+    end
+    return traces
 end
 
 function computeTrace_2(T::Matrix,x::Vector,z::Variable,z₀::Number,v::Vector,ϕ::Function,nodes::NodeType)
     S = System(T*x - v, parameters = [z])
     startsols = getStartsols(S, z₀)
     tracker = Tracker(ParameterHomotopy(S, [2.2], [2.2]))
-    solution_sets = []
-    for i = 1:length(nodes)
-        start_parameters!(tracker, [z₀])
-        target_parameters!(tracker, [ϕ(nodes[i])])
-        z₀ = ϕ(nodes[i])
+    traces = zeros(ComplexF64, length(v),length(nodes) )
+    traces[:,1] = sum(startsols)
+    for i = 1:length(nodes)-1
+        start_parameters!(tracker, [ϕ(nodes[i])])
+        target_parameters!(tracker, [ϕ(nodes[i+1])])
         res = track.(tracker, startsols, 1.0, 0.0)
         startsols = [r.solution for r ∈ res]
-        push!(solution_sets,startsols)
+        traces[:,i+1] = sum(startsols)
     end
-    traces = [sum(solset) for solset ∈ solution_sets]
-    return  traces
+    return traces
 end
 
 function computeTrace(T::Matrix, x::Vector, z::Variable, z₀::Number, v::Vector, ϕ::Function, nodes::NodeType)
@@ -77,7 +91,7 @@ function getTraceMatrices(T::Matrix, x::Vector, z::Variable, ϕ::Function, nodes
         v = V[:,i]
         traces = computeTrace_2(T,x,z,z₀,v,ϕ,nodes)
         for j = 1:length(nodes)
-            traceMatrices[j,:,i] = traces[j]
+            traceMatrices[j,:,i] = traces[:,j]
         end
     end
     traceMatrices = [traceMatrices[i,:,:] for i = 1:length(nodes)]

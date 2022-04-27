@@ -14,21 +14,21 @@ T = [dot(randn(length(mons12)),mons12) for i = 1:n^2]
 T = reshape(T,n,n)
 
 function ϕ(t)
-    a=20
-    b=1
-    center = -10im
+    a=0.2
+    b=0.2
+    center = 0
     center + a*cos(2*pi*t) + im*b*sin(2*pi*t)
 end
 
 function ϕprime(t)
-    a = 20
-    b = 1
+    a = 0.2
+    b = 0.2
     2*pi*a*sin(2*pi*t) - 2*pi*im*b*cos(2*pi*t)
 end
 
-R = solve( System(subs(T*x, x[1]=>1)), threading = false , compile=false);
+R = solve( System(subs(T*x, x[1]=>1)));
 eigenvalues = [r[end] for r ∈ solutions(R) if abs(r[1]*r[2])>1e-6];
-scatter(real(eigenvalues), imag(eigenvalues),label="Exact", markersize=3)#,xlims=(-1,2),ylims=(-0.5,0.5),aspect_ratio=:equal)
+scatter(real(eigenvalues), imag(eigenvalues),label="Exact", markersize=3,xlims=(-.5,0.5),ylim=(-0.5,0.5))#,xlims=(-1,2),ylims=(-0.5,0.5),aspect_ratio=:equal)
 plotnodes = LinRange(0,1,100);
 plot!(real(ϕ.(plotnodes)), imag(ϕ.(plotnodes)),label="Contour")
 
@@ -56,9 +56,9 @@ scatter!(real(λs), imag(λs),label="Beyn", markersize=3,marker=:x)
 
 using BenchmarkTools
 function bruteforce_solve()
-    d = 2
-    e = 13
-    n = 3
+    d = 1
+    e = 5
+    n = 10
     Random.seed!(1)
     @var x[1:n] z
     E,C = exponents_coefficients((1+z)^e*sum(x)^d,[z;x])
@@ -82,9 +82,9 @@ function bruteforce_solve()
 end
 
 function contour_solve()
-    d = 2
-    e = 13
-    n = 3
+    d = 1
+    e = 5
+    n = 10
     Random.seed!(1)
     @var x[1:n] z
     E,C = exponents_coefficients((1+z)^e*sum(x)^d,[z;x])

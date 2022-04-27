@@ -1,7 +1,7 @@
 using LinearAlgebra
 using HomotopyContinuation
 using Random
-using Plots; pgfplotsx();
+using Plots; # pgfplotsx();
 include("PEPv.jl")
 
 # Experiment 1a
@@ -42,6 +42,7 @@ end
 
 nodes = LinRange(0,1,100);
 highestMoment = 19;
+V = PEPv.getRandomMonomialsFor(T,x,z,3);
 momentMatrices = PEPv.getMomentMatrices(T, x, z, nodes, ϕ, ϕprime, V, highestMoment)
 λs,xs,res = PEPv.eigenpairsFromIntegrals(Tfunction, 1e-0, momentMatrices...); λs
 

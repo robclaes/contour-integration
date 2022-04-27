@@ -1,7 +1,8 @@
 using LinearAlgebra
 using HomotopyContinuation
 using Random
-using Plots; # pgfplotsx();
+using Statistics
+using Plots;  #pgfplotsx();
 include("PEPv.jl")
 
 # Experiment 1a
@@ -26,7 +27,7 @@ function ϕprime(t)
 end
 
 plotnodes = LinRange(0,1,100);
-plot(real(ϕ.(plotnodes)), imag(ϕ.(plotnodes)),label="Contour")
+#plot(real(ϕ.(plotnodes)), imag(ϕ.(plotnodes)),label="Contour");
 
 
 function Tfunction(xx,zz)
@@ -35,10 +36,35 @@ function Tfunction(xx,zz)
 end
 
 V = PEPv.getRandomMonomialsFor(T,x,z,n);
-nodes = LinRange(0,1,100);
-highestMoment = 21;
+nodes = LinRange(0,1,150);
+highestMoment = 15;
 momentMatrices = PEPv.getMomentMatrices(T, x, z, nodes, ϕ, ϕprime, V, highestMoment)
 λs,xs,res = PEPv.eigenpairsFromIntegrals(Tfunction, 1e-1, momentMatrices...); 
-scatter!(real(λs), imag(λs),label="Beyn", markersize=3,marker=:o)
+#scatter!(real(λs), imag(λs),label="Beyn", markersize=3,marker=:o);
+#savefig("experiment3.tex");
 
 
+
+nodelengths = [50,60,70,80,90,100,110,120,130,140,150,160,170,180,190,200,210,230,240];
+maxres = zeros(Float64,size(nodelengths))
+minres = zeros(Float64,size(nodelengths))
+medres = zeros(Float64,size(nodelengths))
+nbsols= zeros(Float64,size(nodelengths))
+i=1;
+for nodelength ∈ nodelengths
+    println(nodelength)
+    nodes = LinRange(0,1,nodelength);
+    highestMoment = 15;
+    momentMatrices = PEPv.getMomentMatrices(T, x, z, nodes, ϕ, ϕprime, V, highestMoment)
+    λs,xs,res = PEPv.eigenpairsFromIntegrals(Tfunction, 1e-1, momentMatrices...); 
+    maxres[i] = maximum(res);
+    minres[i] = minimum(res);
+    medres[i] = median(res);
+    nbsols[i] = length(res);
+    i +=1;
+end
+
+plot(nodelengths,minres, yaxis=:log,yticks=[1e-5, 1e-10, 1e-11, 1e-12, 1e-13, 1e-14, 1e-15] , label="Min");
+plot!(nodelengths,medres, yaxis=:log,yticks=[1e-5, 1e-10, 1e-11, 1e-12, 1e-13, 1e-14, 1e-15] , label="Med");
+plot!(nodelengths,maxres, yaxis=:log,yticks=[1e-5, 1e-10, 1e-11, 1e-12, 1e-13, 1e-14, 1e-15] , label="Max");
+savefig("experiment3_conv.tex")
