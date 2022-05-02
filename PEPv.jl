@@ -21,6 +21,13 @@ function getRandomMonomial(x::Vector, d::Int)
     mono = randn()*monomials[ind]
 end
 
+function getRandomMonomialVector(x::Vector, d::Int)
+    E,_ = exponents_coefficients(sum(x)^d,x)
+    monomials = [prod(x.^E[:,i]) for i = 1:size(E,2)]
+    ind = round(Int,length(monomials)/2)
+    ind = rand(1:length(monomials))
+    mono = randn(size(x))*monomials[ind]
+end
 
 function getRandomPolynomialsFor(T::Matrix, x::Vector, z::Variable, nbcols::Int)
     n = size(T,1)
@@ -34,6 +41,13 @@ function getRandomMonomialsFor(T::Matrix,x::Vector, z::Variable, nbcols::Int)
     T1 = T*ones(n)
     dT = [degree(T1[i],x) for i ∈ 1:n]
     reshape( [ getRandomMonomial(x,dT[i]) for j ∈ 1:nbcols for i ∈ 1:n], n, nbcols)
+end
+
+function sameDegreeMonomialsFor(T::Matrix,x::Vector, z::Variable, nbcols::Int)
+    n = size(T,1)
+    T1 = T*ones(n)
+    d = degree(T1[1],x)
+    reduce(hcat,[getRandomMonomialVector(x,d) for j ∈ 1:nbcols])
 end
 
 
