@@ -137,6 +137,7 @@ function getMomentMatrices(T::Matrix, x::Vector, z::Variable, nodes::NodeType, �
     momentMatrices = [momentMatrix(traceMatrices,nodes,ϕ,ϕprime,i,trap) for i = 0:highestMoment]
 end
 
+
 function blockHankel(Ai::Matrix{N} ...) where {N<:Number}
     @assert length(Ai)%2 == 0;
 
@@ -183,5 +184,74 @@ function eigenpairsFromIntegrals(T::Function, tol::Real, Ai::Matrix{N} ...) wher
     end
     return L[inds],X[:,inds],res;
 end
+
+
+
+## Rational specific methods
+
+struct RationalModel
+    A::Matrix # (n,n)
+    B::Matrix # (n,n)
+    TT::Array # (m,n,n)
+    r::Matrix # (m,n)
+    s::Matrix # (m,n)
+end
+
+function getMomentMatrices(T::Matrix, model::RationalModel, x::Vector, z::Variable, nodes::NodeType, ϕ::Function, ϕprime::Function, V::Matrix, highestMoment::Integer, trap::Bool=true)
+    traceMatrices = getTraceMatrices(T, model, x, z, ϕ, nodes, V)
+    momentMatrices = [momentMatrix(traceMatrices,nodes,ϕ,ϕprime,i,trap) for i = 0:highestMoment]
+end
+
+function getTraceMatrices(T::Matrix, model::RationalModel, x::Vector, z::Variable, ϕ::Function, nodes::NodeType, V::Matrix)
+    z₀ = ϕ(nodes[1])
+    k = size(V,2)
+    n = size(T,1)
+    traceMatrices = zeros(ComplexF64,length(nodes),n,k)
+    for i = 1:k
+        v = V[:,i]
+        traces = computeTrace_2(T,model,x,z,z₀,v,ϕ,nodes)
+        for j = 1:length(nodes)
+            traceMatrices[j,:,i] = traces[:,j]
+        end
+    end
+    traceMatrices = [traceMatrices[i,:,:] for i = 1:length(nodes)]
+    return traceMatrices
+end
+
+function computeTrace_2(T::Matrix,model::RationalModel, x::Vector,z::Variable,z₀::Number,v::Vector,ϕ::Function,nodes::NodeType)
+    S = System(T*x - v, parameters = [z])
+    startsols = getStartsols(model, x, v, z₀)
+    tracker = Tracker(ParameterHomotopy(S, [2.2], [2.2]))
+    traces = zeros(ComplexF64, length(v),length(nodes) )
+    traces[:,1] = sum(startsols)
+    for i = 1:length(nodes)-1
+        start_parameters!(tracker, [ϕ(nodes[i])])
+        target_parameters!(tracker, [ϕ(nodes[i+1])])
+        res = track.(tracker, startsols, 1.0, 0.0)
+        startsols = [r.solution for r ∈ res]
+        traces[:,i+1] = sum(startsols)
+    end
+    return traces
+end
+
+function getStartsols(model::RationalModel, x::Vector, v::Vector, z₀::Number)
+    m, n = size(model.r)
+    @var zz[1:m] TT0[1:n,1:n] TT[1:m,1:n,1:n] vv[1:n] rr[1:m,1:n] sss[1:m,1:n]
+    parvec = [TT0[:];TT[:];vv[:];rr[:];sss[:]]
+    ssx = sss*x;
+    rrx = rr*x;
+    Sys1 = (TT0 + sum([zz[i]*TT[i,:,:] for i = 1:m]))*x - vv
+    Sys2 = [ssx[i]*zz[i]-rrx[i] for i = 1:m]
+    Sys = System([Sys1;Sys2], parameters = parvec)
+    target_T0 = model.A+z₀*model.B
+    target_T = model.TT
+    target_v = v
+    target_r = model.r
+    target_s = model.s
+    target_parvec = [target_T0[:];target_T[:];target_v[:];target_r[:];target_s[:]]
+    R3 = solve(Sys,target_parameters = target_parvec)
+    return [sol[1:n] for sol ∈ solutions(R3)]
+end
+
 
 end
