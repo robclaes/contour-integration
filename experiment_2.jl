@@ -4,7 +4,6 @@ using Random
 using Plots; # pgfplotsx();
 include("PEPv.jl")
 
-# Experiment 1a
 Random.seed!(1)
 n=10
 @var x[1:n] z
@@ -27,7 +26,7 @@ end
 
 R = solve( System(subs(T*x, x[1]=>1)));
 eigenvalues = [r[end] for r ∈ solutions(R) if abs(r[1]*r[2])>1e-6];
-scatter(real(eigenvalues), imag(eigenvalues),label="Exact", markersize=3,xlims=(-.5,0.5),ylim=(-0.5,0.5))#,xlims=(-1,2),ylims=(-0.5,0.5),aspect_ratio=:equal)
+scatter(real(eigenvalues), imag(eigenvalues),label="Exact", markersize=3,xlims=(-.5,0.5),ylim=(-0.5,0.5));
 plotnodes = LinRange(0,1,100);
 plot!(real(ϕ.(plotnodes)), imag(ϕ.(plotnodes)),label="Contour")
 
@@ -37,8 +36,8 @@ function Tfunction(xx,zz)
     reshape(sysT([xx;zz]),size(T))
 end
 
-nodes = LinRange(0,1,200);
-highestMoment = 71;
+nodes = LinRange(0,1,400);
+highestMoment = 9;
 V = PEPv.getRandomMonomialsFor(T,x,z,n);
 momentMatrices = PEPv.getMomentMatrices(T, x, z, nodes, ϕ, ϕprime, V, highestMoment)
 λs,xs,res = PEPv.eigenpairsFromIntegrals(Tfunction, 1e-0, momentMatrices...); λs
@@ -56,8 +55,8 @@ scatter!(real(λs), imag(λs),label="Beyn", markersize=3,marker=:x)
 using BenchmarkTools
 function bruteforce_solve()
     d = 1
-    e = 7
-    n = 5
+    e = 5
+    n = 10
     Random.seed!(1)
     @var x[1:n] z
     E,C = exponents_coefficients((1+z)^e*sum(x)^d,[z;x])
@@ -66,15 +65,15 @@ function bruteforce_solve()
     T = reshape(T,n,n)
 
     function ϕ(t)
-        a=0.25
-        b=0.25
-        center = -0.2
+        a=0.1
+        b=0.1
+        center = 0
         center + a*cos(2*pi*t) + im*b*sin(2*pi*t)
     end
 
     function ϕprime(t)
-        a = 0.25
-        b = 0.25
+        a = 0.1
+        b = 0.1
         2*pi*a*sin(2*pi*t) - 2*pi*im*b*cos(2*pi*t)
     end
     R = solve(System(subs(T*x, x[1]=>1)));
@@ -82,8 +81,8 @@ end
 
 function contour_solve()
     d = 1
-    e = 7
-    n = 5
+    e = 5
+    n = 10
     Random.seed!(1)
     @var x[1:n] z
     E,C = exponents_coefficients((1+z)^e*sum(x)^d,[z;x])
@@ -92,15 +91,15 @@ function contour_solve()
     T = reshape(T,n,n)
 
     function ϕ(t)
-        a=0.6
-        b=0.25
-        center = 0.55
+        a=0.1
+        b=0.1
+        center = 0.0
         center + a*cos(2*pi*t) + im*b*sin(2*pi*t)
     end
 
     function ϕprime(t)
-        a = 0.6
-        b = 0.25
+        a = 0.1
+        b = 0.1
         2*pi*a*sin(2*pi*t) - 2*pi*im*b*cos(2*pi*t)
     end
 
@@ -109,8 +108,8 @@ function contour_solve()
         reshape(sysT([xx;zz]),size(T))
     end
     
-    nodes = LinRange(0,1,50);
-    highestMoment = 11;
+    nodes = LinRange(0,1,400);
+    highestMoment = 9;
     V = PEPv.getRandomMonomialsFor(T,x,z,n);
     momentMatrices = PEPv.getMomentMatrices(T, x, z, nodes, ϕ, ϕprime, V, highestMoment)
     λs,xs,res = PEPv.eigenpairsFromIntegrals(Tfunction, 1e-0, momentMatrices...);

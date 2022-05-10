@@ -5,7 +5,6 @@ using Statistics
 using Plots;  #pgfplotsx();
 include("PEPv.jl")
 
-# Experiment 1a
 Random.seed!(1)
 n=2
 @var x[1:2] z
@@ -27,7 +26,6 @@ function ϕprime(t)
 end
 
 plotnodes = LinRange(0,1,100);
-#plot(real(ϕ.(plotnodes)), imag(ϕ.(plotnodes)),label="Contour");
 
 
 function Tfunction(xx,zz)
@@ -40,8 +38,8 @@ nodes = LinRange(0,1,150);
 highestMoment = 15;
 momentMatrices = PEPv.getMomentMatrices(T, x, z, nodes, ϕ, ϕprime, V, highestMoment)
 λs,xs,res = PEPv.eigenpairsFromIntegrals(Tfunction, 1e-1, momentMatrices...); 
-#scatter!(real(λs), imag(λs),label="Beyn", markersize=3,marker=:o);
-#savefig("experiment3.tex");
+scatter!(real(λs), imag(λs),label="Beyn", markersize=3,marker=:o);
+savefig("experiment3.tex");
 
 
 

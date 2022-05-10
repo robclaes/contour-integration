@@ -4,7 +4,6 @@ using Random
 using Plots; # pgfplotsx();
 include("PEPv.jl")
 
-# Experiment 1a
 Random.seed!(1)
 @var x[1:3] z
 E,C = exponents_coefficients((1+z)^4*sum(x)^2,[z;x])
